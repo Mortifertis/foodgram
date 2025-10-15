@@ -160,7 +160,7 @@ jobs:
 
             echo "Start/Update backend+db stack..."
             docker compose -f docker-compose.backend.yml pull backend || true
-            docker compose -f docker-compose.backend.yml up -d
+            docker compose -f docker-compose.backend.yml up -d --no-build
 
             echo "Apply migrations & collectstatic (runtime, Postgres)..."
             docker compose -f docker-compose.backend.yml run --rm backend python manage.py migrate --noinput
