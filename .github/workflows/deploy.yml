@@ -57,7 +57,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: |
             docker-compose.backend.yml
-            .env.backend
           target: ${{ env.REMOTE_APP_PATH }}
 
       - name: Upload infra + frontend + docs (+ override)
@@ -84,6 +83,11 @@ jobs:
           script: |
             set -e
             cd "${REMOTE_APP_PATH}"
+
+            if [ ! -f ".env.backend" ]; then
+              echo "::error ::Файл ${REMOTE_APP_PATH}/.env.backend не найден на сервере. Создай его вручную (секреты) и перезапусти деплой."
+              exit 1
+            fi
 
             # Переменная нужна для подстановки image: ${DOCKERHUB_USERNAME}/foodgram_backend в compose
             export DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}"
