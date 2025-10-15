@@ -69,6 +69,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: docker-compose.backend.yml
           target: ${{ env.REMOTE_APP_PATH }}
+          overwrite: true
 
       - name: Upload infra + frontend + docs (+ override)
         uses: appleboy/scp-action@v0.1.7
@@ -83,6 +84,7 @@ jobs:
             frontend/**
             docs/**
           target: ${{ env.REMOTE_APP_PATH }}
+          overwrite: true
 
       - name: Deploy both stacks over SSH
         uses: appleboy/ssh-action@v1.2.0
