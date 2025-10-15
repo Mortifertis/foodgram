@@ -48,15 +48,26 @@ jobs:
       - name: Checkout (to scp needed dirs)
         uses: actions/checkout@v4
 
-      - name: Upload backend compose & env
+      - name: Prepare remote dir
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            mkdir -p "${{ env.REMOTE_APP_PATH }}/infra"
+
+      - name: Upload backend compose
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
-          source: |
-            docker-compose.backend.yml
+          source: docker-compose.backend.yml
           target: ${{ env.REMOTE_APP_PATH }}
 
       - name: Upload infra + frontend + docs (+ override)
@@ -65,10 +76,10 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           source: |
             infra/**
-            infra/docker-compose.override.yml
             frontend/**
             docs/**
           target: ${{ env.REMOTE_APP_PATH }}
@@ -79,24 +90,24 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd "${REMOTE_APP_PATH}"
+            cd "${{ env.REMOTE_APP_PATH }}"
 
             if [ ! -f ".env.backend" ]; then
-              echo "::error ::Файл ${REMOTE_APP_PATH}/.env.backend не найден на сервере. Создай его вручную (секреты) и перезапусти деплой."
+              echo "::error ::Файл ${{ env.REMOTE_APP_PATH }}/.env.backend не найден на сервере. Создай его вручную (секреты) и перезапусти деплой."
               exit 1
             fi
 
-            # Переменная нужна для подстановки image: ${DOCKERHUB_USERNAME}/foodgram_backend в compose
             export DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}"
 
             echo "Docker login..."
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
             echo "Pull latest backend image..."
-            docker pull "${IMAGE_NAME}:latest" || true
+            docker pull "${{ env.IMAGE_NAME }}:latest" || true
 
             echo "Start/Update backend+db stack..."
             docker compose -f docker-compose.backend.yml pull backend || true
