@@ -8,13 +8,19 @@ from recipes.models import Ingredient
 
 
 class Command(BaseCommand):
-    help = 'Load ingredients from data/ingredients.json or data/ingredients.csv'
+    help = (
+        'Load ingredients from data/ingredients.json '
+        'or data/ingredients.csv'
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--path',
             type=str,
-            help='Path to ingredients file (json or csv). Defaults to data/ingredients.json',
+            help=(
+                'Path to ingredients file (json or csv). '
+                'Defaults to data/ingredients.json'
+            ),
         )
 
     def handle(self, *args, **options):
@@ -53,4 +59,6 @@ class Command(BaseCommand):
         else:
             raise CommandError('Поддерживаются только файлы CSV или JSON')
 
-        self.stdout.write(self.style.SUCCESS(f'Загружено ингредиентов: {created}'))
+        self.stdout.write(
+            self.style.SUCCESS(f'Загружено ингредиентов: {created}')
+        )

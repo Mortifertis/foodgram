@@ -18,7 +18,17 @@ class FoodgramUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active')
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Персональная информация', {'fields': ('username', 'first_name', 'last_name', 'avatar')}),
+        (
+            'Персональная информация',
+            {
+                'fields': (
+                    'username',
+                    'first_name',
+                    'last_name',
+                    'avatar',
+                )
+            },
+        ),
         (
             'Права доступа',
             {

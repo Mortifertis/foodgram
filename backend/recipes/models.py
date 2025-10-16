@@ -54,9 +54,18 @@ class Recipe(models.Model):
     text = models.TextField('Описание')
     cooking_time = models.PositiveIntegerField(
         'Время приготовления (мин)',
-        validators=[MinValueValidator(1, message='Минимальное время приготовления — 1 минута')],
+        validators=[
+            MinValueValidator(
+                1,
+                message='Минимальное время приготовления — 1 минута',
+            )
+        ],
     )
-    tags = models.ManyToManyField(Tag, related_name='recipes', verbose_name='Теги')
+    tags = models.ManyToManyField(
+        Tag,
+        related_name='recipes',
+        verbose_name='Теги',
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
@@ -97,7 +106,12 @@ class RecipeIngredient(models.Model):
     )
     amount = models.PositiveIntegerField(
         'Количество',
-        validators=[MinValueValidator(1, message='Количество должно быть не меньше 1')],
+        validators=[
+            MinValueValidator(
+                1,
+                message='Количество должно быть не меньше 1',
+            )
+        ],
     )
 
     class Meta:
