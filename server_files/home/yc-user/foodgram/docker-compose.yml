@@ -11,37 +11,17 @@ services:
     healthcheck:
       test:
         - "CMD-SHELL"
-        - |
-          set -e
-          HOST="$${POSTGRES_HOST:-127.0.0.1}"
-          PORT="$${POSTGRES_PORT:-5432}"
-          DB="$${POSTGRES_DB:-}"
-          if [ -z "$$DB" ]; then
-            DB="$${POSTGRES_USER:-postgres}"
+        - >-
+          if [ -n "$${POSTGRES_PASSWORD:-}" ]; then
+            PGPASSWORD="$${POSTGRES_PASSWORD}" pg_isready -h "$${POSTGRES_HOST:-127.0.0.1}" -p "$${POSTGRES_PORT:-5432}" -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-$${POSTGRES_USER:-postgres}}"
+          else
+            pg_isready -h "$${POSTGRES_HOST:-127.0.0.1}" -p "$${POSTGRES_PORT:-5432}" -U "$${POSTGRES_USER:-postgres}" -d "$${POSTGRES_DB:-$${POSTGRES_USER:-postgres}}"
           fi
 
-          check_ready() {
-            local user="$1"
-            if [ -z "$$user" ]; then
-              return 1
-            fi
-
-            if [ -n "$${POSTGRES_PASSWORD:-}" ]; then
-              PGPASSWORD="$${POSTGRES_PASSWORD}" pg_isready -h "$$HOST" -p "$$PORT" -U "$$user" -d "$$DB"
-            else
-              pg_isready -h "$$HOST" -p "$$PORT" -U "$$user" -d "$$DB"
-            fi
-          }
-
-          if check_ready "$${POSTGRES_USER:-}"; then
-            exit 0
-          fi
-
-          check_ready postgres
-      start_period: 20s
+      start_period: 60s
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
 
   backend:
     image: ${DOCKERHUB_USERNAME:-foodgram}/foodgram_backend:${FOODGRAM_BACKEND_TAG:-latest}
