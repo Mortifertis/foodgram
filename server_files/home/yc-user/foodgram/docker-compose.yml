@@ -21,7 +21,7 @@ services:
           HOST="$${POSTGRES_HOST:-127.0.0.1}"
           PORT="$${POSTGRES_PORT:-5432}"
           if [ -n "$${POSTGRES_PASSWORD:-}" ]; then
-            PGPASSWORD="$${POSTGRES_PASSWORD}" pg_isready -h "$$HOST" -p "$$POR>
+            PGPASSWORD="$${POSTGRES_PASSWORD}" pg_isready -h "$$HOST" -p "$$PORT" -U "$$USER" -d "$$DB"
           else
             pg_isready -h "$$HOST" -p "$$PORT" -U "$$USER" -d "$$DB"
           fi
@@ -31,7 +31,7 @@ services:
       retries: 10
 
   backend:
-    image: ${DOCKERHUB_USERNAME:-foodgram}/foodgram_backend:${FOODGRAM_BACKEND_>
+    image: ${DOCKERHUB_USERNAME:-foodgram}/foodgram_backend:${FOODGRAM_BACKEND_TAG:-latest}
     container_name: foodgram-backend
     restart: always
     depends_on:
