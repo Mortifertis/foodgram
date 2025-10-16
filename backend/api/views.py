@@ -1,34 +1,21 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import HttpResponse
-
 from djoser.views import UserViewSet as DjoserUserViewSet
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
-from recipes.models import (
-    Favorite,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Tag,
-)
 from users.models import Subscription
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (
-    AvatarSerializer,
-    IngredientSerializer,
-    RecipeReadSerializer,
-    RecipeShortSerializer,
-    RecipeWriteSerializer,
-    SubscriptionSerializer,
-    TagSerializer,
-)
+from .serializers import (AvatarSerializer, IngredientSerializer,
+                          RecipeReadSerializer, RecipeShortSerializer,
+                          RecipeWriteSerializer, SubscriptionSerializer,
+                          TagSerializer)
 
 User = get_user_model()
 
@@ -97,7 +84,6 @@ class CustomUserViewSet(DjoserUserViewSet):
             subscription,
             context={'request': request},
         )
-        serializer = SubscriptionSerializer(subscription, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
@@ -194,7 +180,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe,
             context={'request': request},
         )
-        serializer = RecipeShortSerializer(recipe, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @favorite.mapping.delete
