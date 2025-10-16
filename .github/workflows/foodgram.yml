@@ -1,0 +1,149 @@
+name: Foodgram CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  tests_backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13.10
+        env:
+          POSTGRES_USER: django_user
+          POSTGRES_PASSWORD: django_password
+          POSTGRES_DB: django_db
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.10' }
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install flake8==6.0.0 flake8-isort==6.0.0
+          pip install -r backend/requirements.txt
+      - name: Lint backend
+        run: flake8 backend/
+      - name: Run tests
+        working-directory: backend
+        env:
+          DB_NAME: django_db
+          DB_USER: django_user
+          DB_PASSWORD: django_password
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+        run: python manage.py test -v 2
+
+  build_and_push:
+    runs-on: ubuntu-latest
+    needs: tests_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: mortifertis
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: mortifertis/foodgram_backend:latest
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: mortifertis/foodgram_frontend:latest
+
+      - name: Build & push gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          push: true
+          tags: mortifertis/foodgram_gateway:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.production.yml"
+          target: "foodgram"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            set -e
+            cd ~/foodgram
+
+            # подтянуть свежие образы
+            docker compose -f docker-compose.production.yml pull
+
+            # поднять db + backend (ждём здоровье db)
+            docker compose -f docker-compose.production.yml up -d db backend
+
+            # миграции и статика
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
+
+            # собрать фронт (одноразово)
+            docker compose -f docker-compose.production.yml run --rm frontend
+
+            # поднять gateway на 10000
+            docker compose -f docker-compose.production.yml up -d gateway
+
+            # подождать health
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:10000/healthz >/dev/null; then
+                echo "gateway is healthy"
+                break
+              fi
+              echo "waiting for gateway... ($i/30)"
+              sleep 2
+              if [ "$i" -eq 30 ]; then
+                echo "gateway health failed"
+                docker compose -f docker-compose.production.yml logs --no-color --tail=200 gateway || true
+                exit 1
+              fi
+            done
+
+            docker image prune -f
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Telegram notify
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ✅ Foodgram: деплой успешно завершён
+            Repo: ${{ github.repository }}
+            Commit: ${{ github.sha }}

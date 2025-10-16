@@ -18,7 +18,7 @@ services:
       retries: 12
 
   backend:
-    build: ./backend
+    image: mortifertis/foodgram_backend:latest
     env_file: .env
     depends_on:
       db:
@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    image: mortifertis/foodgram_frontend:latest
     env_file: .env
     volumes:
       - static:/static
@@ -38,7 +38,7 @@ services:
     restart: "no"
 
   gateway:
-    build: ./nginx
+    image: mortifertis/foodgram_gateway:latest
     env_file: .env
     ports:
       - "10000:80"
