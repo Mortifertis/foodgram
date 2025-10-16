@@ -58,15 +58,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
 ASGI_APPLICATION = 'foodgram_backend.asgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.getenv('DB_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.getenv('POSTGRES_USER', ''),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+DEFAULT_DB_CONFIG = {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.getenv('DB_NAME', 'postgres'),
+    'USER': os.getenv('POSTGRES_USER', 'postgres'),
+    'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+    'HOST': os.getenv('DB_HOST', 'db'),
+    'PORT': os.getenv('DB_PORT', '5432'),
+}
+
+if os.getenv('USE_SQLITE_FOR_BUILD') in {'1', 'true', 'True'}:
+    DEFAULT_DB_CONFIG = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+
+DATABASES = {
+    'default': DEFAULT_DB_CONFIG,
 }
 
 AUTH_PASSWORD_VALIDATORS = [

@@ -15,8 +15,14 @@ COPY . .
 
 ENV DJANGO_SETTINGS_MODULE=foodgram_backend.settings
 
+# Используем SQLite во время сборки, чтобы успешно выполнить миграции
+ENV USE_SQLITE_FOR_BUILD=1
 RUN python manage.py migrate --noinput
 RUN python manage.py collectstatic --noinput
+ENV USE_SQLITE_FOR_BUILD=0
 
-EXPOSE 8000
-CMD ["gunicorn", "foodgram_backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 10000
+
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: foodgram-db
+    restart: always
+    env_file:
+      - .env.backend
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-${DB_NAME}}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ${DOCKERHUB_USERNAME:-foodgram}/foodgram_backend:${FOODGRAM_BACKEND_TAG:-latest}
+    container_name: foodgram-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.backend
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_ENGINE: django.db.backends.postgresql
+    volumes:
+      - media_value:/app/media
+      - static_value:/app/collected_static
+
+  nginx:
+    image: nginx:1.25.4-alpine
+    container_name: foodgram-nginx
+    depends_on:
+      - backend
+    restart: always
+    ports:
+      - "10000:80"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_value:/var/html/static:ro
+      - media_value:/var/html/media:ro
+      - ./docs:/var/html/docs:ro
+
+volumes:
+  pg_data:
+  media_value:
+  static_value:
