@@ -5,15 +5,45 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'insecure-secret-key')
-
 DEBUG = os.getenv('DEBUG', 'False').lower() in {'true', '1', 'yes'}
 
 _allowed_hosts = [
-    host.strip()
-    for host in os.getenv('ALLOWED_HOSTS', '*').split(',')
-    if host.strip()
+    h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',')
+    if h.strip()
 ]
 ALLOWED_HOSTS: list[str] = _allowed_hosts or ['*']
+
+# За обратным прокси важно сообщить Django, что внешний протокол — HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Куки под HTTPS (можно выключить через ENV при локальной отладке)
+def _env_bool(name: str, default: bool) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.lower() in {'1', 'true', 'yes', 'on'}
+
+SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE', True)
+CSRF_COOKIE_SECURE = _env_bool('CSRF_COOKIE_SECURE', True)
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+
+# CSRF_TRUSTED_ORIGINS должен содержать полные Origin со схемой.
+# 1) Берём из ENV, если задано (через запятую).
+# 2) Иначе строим из ALLOWED_HOSTS со схемой https:// (игнорируя '*').
+_env_csrf = [
+    o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if o.strip()
+]
+if _env_csrf:
+    CSRF_TRUSTED_ORIGINS = _env_csrf
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        (h if h.startswith('http://') or h.startswith('https://') else f'https://{h}')
+        for h in ALLOWED_HOSTS if h != '*'
+    ]
+
+# Если используешь несколько прокси и хочешь уважать X-Forwarded-Host:
+USE_X_FORWARDED_HOST = _env_bool('USE_X_FORWARDED_HOST', True)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -70,7 +100,6 @@ DEFAULT_DB_CONFIG = {
     'HOST': os.getenv('DB_HOST', 'db'),
     'PORT': os.getenv('DB_PORT', '5432'),
 }
-
 if os.getenv('USE_SQLITE_FOR_BUILD') in {'1', 'true', 'True'}:
     DEFAULT_DB_CONFIG = {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -109,20 +138,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = 'users.User'
+
 LANGUAGE_CODE = 'ru-RU'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'collected_static'
+STATIC_URL = '/static/'
+STATIC_ROOT = Path(os.getenv('STATIC_ROOT', '/app/static'))
 
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', '/app/media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
