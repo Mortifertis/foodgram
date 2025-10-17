@@ -16,12 +16,14 @@ ALLOWED_HOSTS: list[str] = _allowed_hosts or ['*']
 # За обратным прокси важно сообщить Django, что внешний протокол — HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+
 # Куки под HTTPS (можно выключить через ENV при локальной отладке)
 def _env_bool(name: str, default: bool) -> bool:
     val = os.getenv(name)
     if val is None:
         return default
     return val.lower() in {'1', 'true', 'yes', 'on'}
+
 
 SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE', True)
 CSRF_COOKIE_SECURE = _env_bool('CSRF_COOKIE_SECURE', True)
