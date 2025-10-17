@@ -1,4 +1,4 @@
-import { Title, Container, Main } from '../../components'
+import { Container, Main } from '../../components'
 import styles from './styles.module.css'
 import MetaTags from 'react-meta-tags'
 
@@ -38,10 +38,18 @@ const About = ({ updateOrders, orders }) => {
           </h2>
           <div className={styles.text}>
             <p className={styles.textItem}>
-              Код проекта находится тут - <a href="#" className={styles.textLink}>Github</a>
+              Код проекта находится тут —
+              <a
+                href="https://github.com/"
+                className={styles.textLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHub
+              </a>
             </p>
             <p className={styles.textItem}>
-              Автор проекта: <a href="#" className={styles.textLink}>Имя Автора</a>
+              Автор проекта: <span className={styles.textLink}>Команда Foodgram</span>
             </p>
           </div>
         </aside>
