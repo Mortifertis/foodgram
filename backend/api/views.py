@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import HttpResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
+from django.urls import reverse
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from rest_framework import status, viewsets
@@ -159,6 +160,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action in {'list', 'retrieve'}:
             return [AllowAny()]
         return super().get_permissions()
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='get-link',
+        permission_classes=[AllowAny],
+    )
+    def get_link(self, request, pk=None):
+        recipe = self.get_object()
+        if not recipe.short_link:
+            recipe.save(update_fields=['short_link'])
+        short_path = reverse(
+            'recipes:short-link',
+            kwargs={'short_link': recipe.short_link},
+        )
+        short_url = request.build_absolute_uri(short_path)
+        return Response({'short-link': short_url})
 
     @action(
         detail=True,

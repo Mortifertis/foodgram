@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.crypto import get_random_string
 
 
 class Tag(models.Model):
@@ -73,6 +74,12 @@ class Recipe(models.Model):
         verbose_name='Ингредиенты',
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    short_link = models.SlugField(
+        'Короткая ссылка',
+        max_length=32,
+        unique=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['-pub_date']
@@ -87,6 +94,22 @@ class Recipe(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        if not self.short_link:
+            self.short_link = self._generate_short_link()
+            if update_fields is not None:
+                kwargs['update_fields'] = list(set(update_fields) | {'short_link'})
+        super().save(*args, **kwargs)
+
+    def _generate_short_link(self, length: int = 6) -> str:
+        """Generate unique short link identifier for recipe."""
+        allowed_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        while True:
+            candidate = get_random_string(length=length, allowed_chars=allowed_chars)
+            if not Recipe.objects.filter(short_link=candidate).exists():
+                return candidate
 
 
 class RecipeIngredient(models.Model):
