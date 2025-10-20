@@ -1,9 +1,9 @@
-"""Custom permissions."""
+"""Пользовательские классы разрешений."""
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorOrReadOnly(BasePermission):
-    """Allow edits only for authors."""
+    """Разрешает изменение объектов только их авторам."""
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:

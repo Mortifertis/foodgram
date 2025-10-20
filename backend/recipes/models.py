@@ -5,7 +5,7 @@ from django.utils.crypto import get_random_string
 
 
 class Tag(models.Model):
-    """Tag for grouping recipes."""
+    """Тег для группировки рецептов."""
 
     name = models.CharField('Название', max_length=200, unique=True)
     color = models.CharField('Цветовой HEX-код', max_length=7, unique=True)
@@ -21,7 +21,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    """Ingredient with measurement unit."""
+    """Ингредиент с указанием единицы измерения."""
 
     name = models.CharField('Название', max_length=200)
     measurement_unit = models.CharField('Единица измерения', max_length=200)
@@ -42,7 +42,7 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
-    """Recipe published by user."""
+    """Рецепт, опубликованный пользователем."""
 
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -106,7 +106,7 @@ class Recipe(models.Model):
         super().save(*args, **kwargs)
 
     def _generate_short_link(self, length: int = 6) -> str:
-        """Generate unique short link identifier for recipe."""
+        """Генерирует уникальный идентификатор короткой ссылки для рецепта."""
         allowed_chars = (
             'abcdefghijklmnopqrstuvwxyz'
             'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -122,7 +122,7 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    """Ingredient amount for recipe."""
+    """Количество конкретного ингредиента в рецепте."""
 
     recipe = models.ForeignKey(
         Recipe,
@@ -162,7 +162,7 @@ class RecipeIngredient(models.Model):
 
 
 class Favorite(models.Model):
-    """Favorite recipe for user."""
+    """Избранный рецепт пользователя."""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -194,7 +194,7 @@ class Favorite(models.Model):
 
 
 class ShoppingCart(models.Model):
-    """Shopping cart items for user."""
+    """Позиции списка покупок пользователя."""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

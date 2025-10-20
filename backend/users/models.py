@@ -4,13 +4,13 @@ from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
-    """Custom manager that uses email as login field."""
+    """Пользовательский менеджер, использующий почту как логин."""
 
     use_in_migrations = True
 
     def _create_user(self, email: str, password: str, **extra_fields):
         if not email:
-            raise ValueError('Email address must be provided')
+            raise ValueError('Необходимо указать адрес электронной почты')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -26,7 +26,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
         if password is None:
-            raise ValueError('Password must be provided')
+            raise ValueError('Необходимо указать пароль')
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email: str, password: str, **extra_fields):
@@ -34,15 +34,15 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
 
         if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
+            raise ValueError('У суперпользователя должно быть is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+            raise ValueError('У суперпользователя должно быть is_superuser=True.')
 
         return self._create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
-    """Custom user model that authenticates with email."""
+    """Пользовательская модель, авторизующаяся по электронной почте."""
 
     email = models.EmailField(_('email address'), unique=True)
     username = models.CharField(_('username'), max_length=150, unique=True)
@@ -70,7 +70,7 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
-    """User subscriptions to authors."""
+    """Подписка пользователя на автора рецептов."""
 
     user = models.ForeignKey(
         User,

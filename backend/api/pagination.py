@@ -1,4 +1,4 @@
-"""Custom pagination classes."""
+"""Пользовательские классы постраничной навигации."""
 from rest_framework.pagination import PageNumberPagination
 
 

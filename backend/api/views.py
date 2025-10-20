@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Prefetch, Sum
+from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,6 +11,7 @@ from rest_framework.response import Response
 from users.models import Subscription
 
 from .filters import IngredientFilter, RecipeFilter
+from .services import ShoppingListRenderer
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeReadSerializer, RecipeShortSerializer,
@@ -265,27 +265,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        ingredients = (
-            RecipeIngredient.objects.filter(
-                recipe__in_carts__user=request.user
-            )
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(total=Sum('amount'))
-            .order_by('ingredient__name')
-        )
-        if not ingredients:
+        renderer = ShoppingListRenderer(request.user)
+        content = renderer.render()
+        if not content:
             return Response(
                 {'errors': 'Список покупок пуст'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        lines = ['Список покупок']
-        for item in ingredients:
-            name = item['ingredient__name']
-            unit = item['ingredient__measurement_unit']
-            total = item['total']
-            lines.append(f'{name} ({unit}) — {total}')
-        content = '\n'.join(lines)
-        response = HttpResponse(content, content_type='text/plain')
+        response = HttpResponse(
+            content,
+            content_type='text/plain; charset=utf-8',
+        )
         response['Content-Disposition'] = (
             'attachment; filename="shopping-list.txt"'
         )

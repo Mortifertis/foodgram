@@ -5,7 +5,7 @@ from .models import Recipe
 
 
 class RecipeShortLinkRedirectView(View):
-    """Redirect to recipe page by its short link."""
+    """Перенаправляет на страницу рецепта по короткой ссылке."""
 
     def get(self, request, short_link):
         recipe = get_object_or_404(Recipe, short_link=short_link)
