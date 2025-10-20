@@ -22,11 +22,18 @@ from .services import ShoppingListRenderer
 
 User = get_user_model()
 
+SHOPPING_LIST_FILENAME = 'shopping-list.txt'
+SHORT_LINK_RESPONSE_KEY = 'short-link'
+
 
 class CustomUserViewSet(DjoserUserViewSet):
+    """Расширяет Djoser, добавляя подписки и работу с аватаром."""
+
     permission_classes = [AllowAny]
 
     def get_permissions(self):
+        """Возвращает набор прав в зависимости от выполняемого действия."""
+
         if self.action in {
             'me',
             'set_password',
@@ -46,6 +53,8 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscriptions(self, request):
+        """Возвращает список авторов, на которых подписан пользователь."""
+
         queryset = (
             Subscription.objects.filter(user=request.user)
             .select_related('author')
@@ -77,6 +86,8 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def set_password(self, request, *args, **kwargs):
+        """Сбрасывает токены при смене пароля."""
+
         response = super().set_password(request, *args, **kwargs)
         if response.status_code == status.HTTP_204_NO_CONTENT:
             Token.objects.filter(user=request.user).delete()
@@ -88,6 +99,8 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, id=None):
+        """Создает подписку на другого пользователя."""
+
         author = self.get_object()
         if author == request.user:
             return Response(
@@ -111,6 +124,8 @@ class CustomUserViewSet(DjoserUserViewSet):
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None):
+        """Удаляет подписку на автора."""
+
         author = self.get_object()
         deleted, _ = Subscription.objects.filter(
             user=request.user,
@@ -130,6 +145,8 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def set_avatar(self, request):
+        """Заменяет аватар пользователя на новый файл."""
+
         serializer = AvatarSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         avatar_file = serializer.validated_data['avatar']
@@ -143,12 +160,16 @@ class CustomUserViewSet(DjoserUserViewSet):
 
     @set_avatar.mapping.delete
     def delete_avatar(self, request):
+        """Сбрасывает аватар пользователя на изображение по умолчанию."""
+
         set_default_avatar(request.user, force=True)
         avatar_url = request.build_absolute_uri(request.user.avatar.url)
         return Response({'avatar': avatar_url})
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """Предоставляет только чтение справочника тегов."""
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
@@ -156,6 +177,8 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """Даёт доступ к списку ингредиентов с фильтрацией по названию."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
@@ -164,6 +187,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """Работает с рецептами: чтение, создание, изменение и действия."""
+
     queryset = (
         Recipe.objects.all()
         .select_related('author')
@@ -173,14 +198,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
 
     def get_serializer_class(self):
+        """Выбирает сериализатор для чтения или записи рецепта."""
+
         if self.action in {'list', 'retrieve'}:
             return RecipeReadSerializer
         return RecipeWriteSerializer
 
     def perform_create(self, serializer):
+        """Сохраняет автора при создании рецепта."""
+
         serializer.save(author=self.request.user)
 
     def get_permissions(self):
+        """Разрешает чтение без авторизации, остальные действия требуют прав."""
+
         if self.action in {'list', 'retrieve'}:
             return [AllowAny()]
         return super().get_permissions()
@@ -192,6 +223,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[AllowAny],
     )
     def get_link(self, request, pk=None):
+        """Возвращает короткую ссылку на рецепт, создавая её при необходимости."""
+
         recipe = self.get_object()
         if not recipe.short_link:
             recipe.save(update_fields=['short_link'])
@@ -200,7 +233,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             kwargs={'short_link': recipe.short_link},
         )
         short_url = request.build_absolute_uri(short_path)
-        return Response({'short-link': short_url})
+        return Response({SHORT_LINK_RESPONSE_KEY: short_url})
 
     @action(
         detail=True,
@@ -208,6 +241,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk=None):
+        """Добавляет рецепт в избранное пользователя."""
+
         recipe = self.get_object()
         favorite, created = Favorite.objects.get_or_create(
             user=request.user,
@@ -226,6 +261,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @favorite.mapping.delete
     def delete_favorite(self, request, pk=None):
+        """Удаляет рецепт из избранного пользователя."""
+
         recipe = self.get_object()
         deleted, _ = Favorite.objects.filter(
             user=request.user,
@@ -244,6 +281,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk=None):
+        """Добавляет рецепт в список покупок пользователя."""
+
         recipe = self.get_object()
         item, created = ShoppingCart.objects.get_or_create(
             user=request.user,
@@ -262,6 +301,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk=None):
+        """Удаляет рецепт из списка покупок пользователя."""
+
         recipe = self.get_object()
         deleted, _ = ShoppingCart.objects.filter(
             user=request.user,
@@ -280,6 +321,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
+        """Формирует и отправляет файл со списком покупок пользователя."""
+
         renderer = ShoppingListRenderer(request.user)
         content = renderer.render()
         if not content:
@@ -292,6 +335,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content_type='text/plain; charset=utf-8',
         )
         response['Content-Disposition'] = (
-            'attachment; filename="shopping-list.txt"'
+            f'attachment; filename="{SHOPPING_LIST_FILENAME}"'
         )
         return response
