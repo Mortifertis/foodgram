@@ -100,14 +100,23 @@ class Recipe(models.Model):
         if not self.short_link:
             self.short_link = self._generate_short_link()
             if update_fields is not None:
-                kwargs['update_fields'] = list(set(update_fields) | {'short_link'})
+                kwargs['update_fields'] = list(
+                    set(update_fields) | {'short_link'}
+                )
         super().save(*args, **kwargs)
 
     def _generate_short_link(self, length: int = 6) -> str:
         """Generate unique short link identifier for recipe."""
-        allowed_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        allowed_chars = (
+            'abcdefghijklmnopqrstuvwxyz'
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            '0123456789'
+        )
         while True:
-            candidate = get_random_string(length=length, allowed_chars=allowed_chars)
+            candidate = get_random_string(
+                length=length,
+                allowed_chars=allowed_chars,
+            )
             if not Recipe.objects.filter(short_link=candidate).exists():
                 return candidate
 
