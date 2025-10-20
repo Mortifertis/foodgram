@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Sum
+from django.db.models import Prefetch, Sum
 from django.http import HttpResponse
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -44,7 +44,16 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscriptions(self, request):
-        queryset = Subscription.objects.filter(user=request.user)
+        queryset = (
+            Subscription.objects.filter(user=request.user)
+            .select_related('author')
+            .prefetch_related(
+                Prefetch(
+                    'author__recipes',
+                    queryset=Recipe.objects.order_by('-pub_date'),
+                )
+            )
+        )
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = SubscriptionSerializer(

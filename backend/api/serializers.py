@@ -253,7 +253,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         recipes_limit = (
             request.query_params.get('recipes_limit') if request else None
         )
-        recipes_qs = obj.author.recipes.all()
+        recipes_qs = obj.author.recipes.order_by('-pub_date')
         if recipes_limit is not None and recipes_limit.isdigit():
             recipes_qs = recipes_qs[: int(recipes_limit)]
         serializer = RecipeShortSerializer(
