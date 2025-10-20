@@ -44,12 +44,12 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     """Пользовательская модель, авторизующаяся по электронной почте."""
 
-    email = models.EmailField(_('email address'), unique=True)
-    username = models.CharField(_('username'), max_length=150, unique=True)
-    first_name = models.CharField(_('first name'), max_length=150)
-    last_name = models.CharField(_('last name'), max_length=150)
+    email = models.EmailField(_('электронная почта'), unique=True)
+    username = models.CharField(_('имя пользователя'), max_length=150, unique=True)
+    first_name = models.CharField(_('имя'), max_length=150)
+    last_name = models.CharField(_('фамилия'), max_length=150)
     avatar = models.ImageField(
-        _('avatar'),
+        _('аватар'),
         upload_to='users/avatars/',
         blank=True,
         null=True,
