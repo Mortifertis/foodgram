@@ -8,7 +8,12 @@ from .services import set_default_avatar
 
 
 @receiver(post_save, sender=User)
-def ensure_default_avatar(sender, instance: User, created: bool, **kwargs) -> None:
+def ensure_default_avatar(
+    sender,
+    instance: User,
+    created: bool,
+    **kwargs,
+) -> None:
     """Назначает аватар по умолчанию новому пользователю."""
 
     if created:

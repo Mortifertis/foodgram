@@ -7,7 +7,6 @@ from typing import Iterable, List
 
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet, Sum
-
 from recipes.models import RecipeIngredient
 
 User = get_user_model()

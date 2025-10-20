@@ -34,9 +34,13 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
 
         if extra_fields.get('is_staff') is not True:
-            raise ValueError('У суперпользователя должно быть is_staff=True.')
+            raise ValueError(
+                'У суперпользователя должно быть is_staff=True.'
+            )
         if extra_fields.get('is_superuser') is not True:
-            raise ValueError('У суперпользователя должно быть is_superuser=True.')
+            raise ValueError(
+                'У суперпользователя должно быть is_superuser=True.'
+            )
 
         return self._create_user(email, password, **extra_fields)
 
@@ -45,7 +49,11 @@ class User(AbstractUser):
     """Пользовательская модель, авторизующаяся по электронной почте."""
 
     email = models.EmailField(_('электронная почта'), unique=True)
-    username = models.CharField(_('имя пользователя'), max_length=150, unique=True)
+    username = models.CharField(
+        _('имя пользователя'),
+        max_length=150,
+        unique=True,
+    )
     first_name = models.CharField(_('имя'), max_length=150)
     last_name = models.CharField(_('фамилия'), max_length=150)
     avatar = models.ImageField(

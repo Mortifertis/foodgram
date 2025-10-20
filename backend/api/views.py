@@ -2,23 +2,25 @@ from django.contrib.auth import get_user_model
 from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.urls import reverse
+
 from djoser.views import UserViewSet as DjoserUserViewSet
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Subscription
 from users.services import delete_avatar_file, set_default_avatar
 
 from .filters import IngredientFilter, RecipeFilter
-from .services import ShoppingListRenderer
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeReadSerializer, RecipeShortSerializer,
                           RecipeWriteSerializer, SubscriptionSerializer,
                           TagSerializer)
+from .services import ShoppingListRenderer
 
 User = get_user_model()
 
