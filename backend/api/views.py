@@ -5,6 +5,7 @@ from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -68,6 +69,17 @@ class CustomUserViewSet(DjoserUserViewSet):
             context={'request': request},
         )
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+    )
+    def set_password(self, request, *args, **kwargs):
+        response = super().set_password(request, *args, **kwargs)
+        if response.status_code == status.HTTP_204_NO_CONTENT:
+            Token.objects.filter(user=request.user).delete()
+        return response
 
     @action(
         detail=True,
