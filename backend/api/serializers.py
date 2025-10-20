@@ -4,6 +4,7 @@ from djoser.serializers import \
     UserCreateSerializer as DjoserUserCreateSerializer
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from PIL import Image, UnidentifiedImageError
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from rest_framework import serializers
@@ -269,3 +270,30 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class AvatarSerializer(serializers.Serializer):
     avatar = Base64ImageField()
+
+    def validate_avatar(self, value):
+        """Проверяет формат и размер изображения аватара."""
+
+        max_size = 5 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                'Размер файла не должен превышать 5 МБ'
+            )
+
+        try:
+            value.seek(0)
+            with Image.open(value) as image:
+                image_format = (image.format or '').upper()
+        except (UnidentifiedImageError, OSError):
+            raise serializers.ValidationError(
+                'Не удалось прочитать изображение'
+            ) from None
+        finally:
+            value.seek(0)
+
+        if image_format not in {'JPEG', 'JPG', 'PNG'}:
+            raise serializers.ValidationError(
+                'Допустимы только изображения формата JPG или PNG'
+            )
+
+        return value

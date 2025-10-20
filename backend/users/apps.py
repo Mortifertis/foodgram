@@ -5,3 +5,8 @@ class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'users'
     verbose_name = 'Пользователи'
+
+    def ready(self) -> None:  # pragma: no cover
+        """Подключает обработчики сигналов приложения."""
+
+        from . import signals  # noqa: F401

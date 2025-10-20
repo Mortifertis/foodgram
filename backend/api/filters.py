@@ -3,7 +3,7 @@ from recipes.models import Ingredient, Recipe
 
 
 class RecipeFilter(django_filters.FilterSet):
-    tags = django_filters.AllValuesMultipleFilter(field_name='tags__slug')
+    tags = django_filters.CharFilter(method='filter_tags')
     author = django_filters.NumberFilter(field_name='author__id')
     is_favorited = django_filters.BooleanFilter(method='filter_is_favorited')
     is_in_shopping_cart = django_filters.BooleanFilter(
@@ -13,6 +13,15 @@ class RecipeFilter(django_filters.FilterSet):
     class Meta:
         model = Recipe
         fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
+
+    def filter_tags(self, queryset, name, value):
+        request = getattr(self, 'request', None)
+        if request is None:
+            return queryset
+        tags = request.query_params.getlist('tags')
+        if not tags:
+            return queryset
+        return queryset.filter(tags__slug__in=tags).distinct()
 
     def filter_is_favorited(self, queryset, name, value):
         user = getattr(self.request, 'user', None)

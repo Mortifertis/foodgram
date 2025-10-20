@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from users.models import Subscription
+from users.services import delete_avatar_file, set_default_avatar
 
 from .filters import IngredientFilter, RecipeFilter
 from .services import ShoppingListRenderer
@@ -131,18 +132,20 @@ class CustomUserViewSet(DjoserUserViewSet):
     def set_avatar(self, request):
         serializer = AvatarSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        request.user.avatar = serializer.validated_data['avatar']
-        request.user.save()
+        avatar_file = serializer.validated_data['avatar']
+        delete_avatar_file(request.user)
+        file_name = getattr(avatar_file, 'name', None) or (
+            f'avatar_{request.user.pk}'
+        )
+        request.user.avatar.save(file_name, avatar_file, save=True)
         avatar_url = request.build_absolute_uri(request.user.avatar.url)
         return Response({'avatar': avatar_url})
 
     @set_avatar.mapping.delete
     def delete_avatar(self, request):
-        if request.user.avatar:
-            request.user.avatar.delete(save=False)
-            request.user.avatar = None
-            request.user.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        set_default_avatar(request.user, force=True)
+        avatar_url = request.build_absolute_uri(request.user.avatar.url)
+        return Response({'avatar': avatar_url})
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
