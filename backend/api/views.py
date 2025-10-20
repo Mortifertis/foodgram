@@ -210,7 +210,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_permissions(self):
-        """Разрешает чтение без авторизации, остальные действия требуют прав."""
+        """Разрешает чтение без авторизации.
+
+        Остальные действия требуют наличия прав у пользователя.
+        """
 
         if self.action in {'list', 'retrieve'}:
             return [AllowAny()]
@@ -223,7 +226,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[AllowAny],
     )
     def get_link(self, request, pk=None):
-        """Возвращает короткую ссылку на рецепт, создавая её при необходимости."""
+        """Возвращает короткую ссылку на рецепт.
+
+        Создаёт её при необходимости.
+        """
 
         recipe = self.get_object()
         if not recipe.short_link:

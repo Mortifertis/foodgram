@@ -19,7 +19,9 @@ class RecipeFilter(django_filters.FilterSet):
         model = Recipe
         fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
 
-    def filter_tags(self, queryset: QuerySet, name: str, value: str) -> QuerySet:
+    def filter_tags(
+        self, queryset: QuerySet, name: str, value: str
+    ) -> QuerySet:
         """Возвращает рецепты с тегами из параметров запроса."""
 
         request = getattr(self, 'request', None)
@@ -33,7 +35,7 @@ class RecipeFilter(django_filters.FilterSet):
     def filter_is_favorited(
         self, queryset: QuerySet, name: str, value: bool | None
     ) -> QuerySet:
-        """Фильтрует рецепты по наличию в избранном авторизованного пользователя."""
+        """Фильтрует рецепты, добавленные в избранное текущим пользователем."""
 
         return self._filter_by_user_relation(queryset, value, 'favorited_by')
 
