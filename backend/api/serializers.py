@@ -40,12 +40,15 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
     class Meta(DjoserUserCreateSerializer.Meta):
         model = User
         fields = (
+            'id',
             'email',
             'username',
             'first_name',
             'last_name',
             'password',
         )
+        read_only_fields = ('id',)
+        extra_kwargs = {'password': {'write_only': True}}
 
 
 class TagSerializer(serializers.ModelSerializer):
