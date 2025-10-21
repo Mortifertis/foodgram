@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Завтрак",
+    "color": "#F5A623",
+    "slug": "breakfast"
+  },
+  {
+    "name": "Обед",
+    "color": "#7ED321",
+    "slug": "lunch"
+  },
+  {
+    "name": "Ужин",
+    "color": "#4A90E2",
+    "slug": "dinner"
+  },
+  {
+    "name": "Бранч",
+    "color": "#BD10E0",
+    "slug": "brunch"
+  },
+  {
+    "name": "Перекус",
+    "color": "#F8E71C",
+    "slug": "snack"
+  },
+  {
+    "name": "Поздний ужин",
+    "color": "#9013FE",
+    "slug": "late-dinner"
+  }
+]
