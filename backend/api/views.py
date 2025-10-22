@@ -5,12 +5,13 @@ from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Subscription
 from users.services import delete_avatar_file, set_default_avatar
 

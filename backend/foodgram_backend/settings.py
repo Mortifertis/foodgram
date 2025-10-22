@@ -156,21 +156,23 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', '/app/media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'core.authentication.SafeTokenAuthentication',
     ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 6,
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-    ),
 }
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': False,
+    'SEND_ACTIVATION_EMAIL': False,
     'SERIALIZERS': {
         'user_create': 'api.serializers.UserCreateSerializer',
         'user': 'api.serializers.UserSerializer',

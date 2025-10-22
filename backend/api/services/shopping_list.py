@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Sum
+
 from recipes.models import RecipeIngredient, ShoppingCart
 
 
