@@ -13,11 +13,9 @@ _allowed_hosts = [
 ]
 ALLOWED_HOSTS: list[str] = _allowed_hosts or ['*']
 
-# За обратным прокси важно сообщить Django, что внешний протокол — HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
-# Куки под HTTPS (можно выключить через ENV при локальной отладке)
 def _env_bool(name: str, default: bool) -> bool:
     val = os.getenv(name)
     if val is None:
@@ -29,9 +27,6 @@ SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE', True)
 CSRF_COOKIE_SECURE = _env_bool('CSRF_COOKIE_SECURE', True)
 CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
 
-# CSRF_TRUSTED_ORIGINS должен содержать полные Origin со схемой.
-# 1) Берём из ENV, если задано (через запятую).
-# 2) Иначе строим из ALLOWED_HOSTS со схемой https:// (игнорируя '*').
 _env_csrf = [
     o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
     if o.strip()
@@ -40,12 +35,12 @@ if _env_csrf:
     CSRF_TRUSTED_ORIGINS = _env_csrf
 else:
     CSRF_TRUSTED_ORIGINS = [
-        (h if h.startswith('http://') or h.startswith('https://') else f'https://{h}')
+        (
+            h if h.startswith('http://') or h.startswith('https://')
+            else f'https://{h}'
+        )
         for h in ALLOWED_HOSTS if h != '*'
     ]
-
-# Если используешь несколько прокси и хочешь уважать X-Forwarded-Host:
-USE_X_FORWARDED_HOST = _env_bool('USE_X_FORWARDED_HOST', True)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -139,7 +134,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'DEFAULT_PAGINATION_CLASS': (
+        'rest_framework.pagination.LimitOffsetPagination'
+    ),
     'PAGE_SIZE': 6,
 }
 
@@ -147,15 +144,26 @@ DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': False,
     'SEND_ACTIVATION_EMAIL': False,
+    'DISABLE_ENDPOINTS': [
+        'users',
+        'users_list',
+        'user',
+        'current_user',
+        'user_delete',
+        'set_password',
+        'reset_password',
+        'reset_password_confirm',
+        'set_username',
+        'reset_username',
+        'reset_username_confirm',
+    ],
     'SERIALIZERS': {
         'user_create': 'api.serializers.UserCreateSerializer',
         'user': 'api.serializers.UserSerializer',
         'current_user': 'api.serializers.UserSerializer',
-        'user_create_password_retype': 'api.serializers.UserCreateSerializer',
-    },
-    'PERMISSIONS': {
-        'user': ['rest_framework.permissions.AllowAny'],
-        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user_create_password_retype': (
+            'api.serializers.UserCreateSerializer'
+        ),
     },
 }
 
@@ -166,8 +174,8 @@ SIMPLE_JWT = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "ERROR"},
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'root': {'handlers': ['console'], 'level': 'ERROR'},
 }
