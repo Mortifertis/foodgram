@@ -1,75 +1,67 @@
-"""Фильтры для выборок рецептов и ингредиентов."""
+from __future__ import annotations
 
-import django_filters
-from django.db.models import QuerySet
-from recipes.models import Ingredient, Recipe
+import django_filters as filters
+from django.contrib.auth import get_user_model
+from django.db.models import Exists, OuterRef
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart
 
-
-class RecipeFilter(django_filters.FilterSet):
-    """Позволяет фильтровать рецепты по тегам и пользовательским флагам."""
-
-    tags = django_filters.CharFilter(method='filter_tags')
-    author = django_filters.NumberFilter(field_name='author__id')
-    is_favorited = django_filters.BooleanFilter(method='filter_is_favorited')
-    is_in_shopping_cart = django_filters.BooleanFilter(
-        method='filter_is_in_shopping_cart'
-    )
-
-    class Meta:
-        model = Recipe
-        fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
-
-    def filter_tags(
-        self, queryset: QuerySet, name: str, value: str
-    ) -> QuerySet:
-        """Возвращает рецепты с тегами из параметров запроса."""
-
-        request = getattr(self, 'request', None)
-        if request is None:
-            return queryset
-        tags = request.query_params.getlist('tags')
-        if not tags:
-            return queryset
-        return queryset.filter(tags__slug__in=tags).distinct()
-
-    def filter_is_favorited(
-        self, queryset: QuerySet, name: str, value: bool | None
-    ) -> QuerySet:
-        """Фильтрует рецепты, добавленные в избранное текущим пользователем."""
-
-        return self._filter_by_user_relation(queryset, value, 'favorited_by')
-
-    def filter_is_in_shopping_cart(
-        self, queryset: QuerySet, name: str, value: bool | None
-    ) -> QuerySet:
-        """Фильтрует рецепты по наличию в списке покупок пользователя."""
-
-        return self._filter_by_user_relation(queryset, value, 'in_carts')
-
-    def _filter_by_user_relation(
-        self, queryset: QuerySet, value: bool | None, relation: str
-    ) -> QuerySet:
-        """Применяет фильтрацию по связи Many-to-Many с пользователем."""
-
-        if value is None:
-            return queryset
-        user = getattr(self.request, 'user', None)
-        if user is None or not user.is_authenticated:
-            return queryset.none() if value else queryset
-        relation_filter = {f'{relation}__user': user}
-        if value:
-            return queryset.filter(**relation_filter)
-        return queryset.exclude(**relation_filter)
+User = get_user_model()
 
 
-class IngredientFilter(django_filters.FilterSet):
-    """Позволяет находить ингредиенты по префиксу названия."""
-
-    name = django_filters.CharFilter(
-        field_name='name',
-        lookup_expr='istartswith',
-    )
+class IngredientFilter(filters.FilterSet):
+    name = filters.CharFilter(field_name="name", lookup_expr="istartswith")
 
     class Meta:
         model = Ingredient
-        fields = ('name',)
+        fields = ("name",)
+
+
+class RecipeFilter(filters.FilterSet):
+    author = filters.NumberFilter(field_name="author__id", lookup_expr="exact")
+    tags = filters.AllValuesMultipleFilter(field_name="tags__slug")
+    is_favorited = filters.NumberFilter(method="filter_is_favorited")
+    is_in_shopping_cart = filters.NumberFilter(method="filter_is_in_cart")
+
+    class Meta:
+        model = Recipe
+        fields = ("author", "tags", "is_favorited", "is_in_shopping_cart")
+
+    def _to_int_or_none(self, value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def filter_is_favorited(self, queryset, name, value):
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return queryset
+        val = self._to_int_or_none(value)
+        if val is None:
+            return queryset
+
+        fav_exists = Favorite.objects.filter(user=user, recipe=OuterRef("pk"))
+        queryset = queryset.annotate(_fav=Exists(fav_exists))
+        if val == 1:
+            return queryset.filter(_fav=True)
+        if val == 0:
+            return queryset.filter(_fav=False)
+        return queryset
+
+    def filter_is_in_cart(self, queryset, name, value):
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return queryset
+        val = self._to_int_or_none(value)
+        if val is None:
+            return queryset
+
+        cart_exists = ShoppingCart.objects.filter(
+            user=user, recipe=OuterRef("pk")
+        )
+        queryset = queryset.annotate(_cart=Exists(cart_exists))
+        if val == 1:
+            return queryset.filter(_cart=True)
+        if val == 0:
+            return queryset.filter(_cart=False)
+        return queryset
