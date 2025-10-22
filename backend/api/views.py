@@ -159,6 +159,7 @@ class CustomUserViewSet(DjoserUserViewSet):
 
     @set_avatar.mapping.delete
     def delete_avatar(self, request):
+        """Сбрасывает аватар пользователя на изображение по умолчанию."""
         set_default_avatar(request.user, force=True)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
