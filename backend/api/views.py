@@ -7,7 +7,6 @@ from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -19,7 +18,7 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeReadSerializer, RecipeShortSerializer,
                           RecipeWriteSerializer, SubscriptionSerializer,
-                          TagSerializer)
+                          TagSerializer, UserCreateSerializer)
 from .services import ShoppingListRenderer
 
 User = get_user_model()
@@ -29,25 +28,75 @@ SHORT_LINK_RESPONSE_KEY = "short-link"
 
 
 class CustomUserViewSet(DjoserUserViewSet):
-    """Расширяет Djoser, добавляя подписки и работу с аватаром."""
+    """
+    Расширяет Djoser:
+    - публичный create (201 и 5 полей);
+    - подписки (list/subscribe/unsubscribe);
+    - аватар (PUT base64 / DELETE 204).
+    """
 
     permission_classes = [AllowAny]
 
     def get_permissions(self):
-        """Возвращает набор прав в зависимости от выполняемого действия."""
-
-        if self.action in {
+        """
+        Доступ:
+        - list/retrieve/create — публичные;
+        - остальное — только аутентифицированным.
+        """
+        public = {"list", "retrieve", "create"}
+        private = {
             "me",
             "set_password",
             "subscriptions",
             "subscribe",
             "set_avatar",
             "delete_avatar",
-        }:
-            return [IsAuthenticated()]
-        if self.action in {"list", "retrieve"}:
+        }
+        if self.action in public:
             return [AllowAny()]
+        if self.action in private:
+            return [IsAuthenticated()]
         return super().get_permissions()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Создаёт пользователя через UserCreateSerializer.
+        Возвращает 201 и поля:
+        id, username, first_name, last_name, email.
+        """
+        serializer = UserCreateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=False,
+        methods=["put"],
+        url_path="me/avatar",
+        permission_classes=[IsAuthenticated],
+    )
+    def set_avatar(self, request):
+        """Ставит новый аватар (base64)."""
+        serializer = AvatarSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        avatar_file = serializer.validated_data["avatar"]
+
+        delete_avatar_file(request.user)
+        file_name = (
+            getattr(avatar_file, "name", None) or f"avatar_{request.user.pk}"
+        )
+        request.user.avatar.save(file_name, avatar_file, save=True)
+        avatar_url = request.build_absolute_uri(request.user.avatar.url)
+        return Response({"avatar": avatar_url})
+
+    @set_avatar.mapping.delete
+    def delete_avatar(self, request):
+        """Удаляет аватар."""
+        set_default_avatar(request.user, force=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -55,44 +104,29 @@ class CustomUserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscriptions(self, request):
-        """Список авторов, на которых подписан пользователь."""
-
+        """
+        Список авторов, на которых подписан текущий пользователь.
+        Поддерживает ?recipes_limit=.
+        """
         queryset = (
             Subscription.objects.filter(user=request.user)
             .select_related("author")
             .prefetch_related(
                 Prefetch(
                     "author__recipes",
-                    queryset=Recipe.objects.order_by("-pub_date"),
+                    queryset=Recipe.objects.order_by("-id"),
                 )
             )
         )
         page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = SubscriptionSerializer(
-                page,
-                many=True,
-                context={"request": request},
-            )
-            return self.get_paginated_response(serializer.data)
         serializer = SubscriptionSerializer(
-            queryset,
+            page if page is not None else queryset,
             many=True,
             context={"request": request},
         )
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
-
-    @action(
-        detail=False,
-        methods=["post"],
-        permission_classes=[IsAuthenticated],
-    )
-    def set_password(self, request, *args, **kwargs):
-        """Сбрасывает токены при успешной смене пароля."""
-        response = super().set_password(request, *args, **kwargs)
-        if response.status_code == status.HTTP_204_NO_CONTENT:
-            Token.objects.filter(user=request.user).delete()
-        return response
 
     @action(
         detail=True,
@@ -137,44 +171,20 @@ class CustomUserViewSet(DjoserUserViewSet):
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(
-        detail=False,
-        methods=["put"],
-        url_path="me/avatar",
-        permission_classes=[IsAuthenticated],
-    )
-    def set_avatar(self, request):
-        """Заменяет аватар пользователя на новый файл (base64)."""
-        serializer = AvatarSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        avatar_file = serializer.validated_data["avatar"]
-        delete_avatar_file(request.user)
-        file_name = (
-            getattr(avatar_file, "name", None)
-            or f"avatar_{request.user.pk}"
-        )
-        request.user.avatar.save(file_name, avatar_file, save=True)
-        avatar_url = request.build_absolute_uri(request.user.avatar.url)
-        return Response({"avatar": avatar_url})
-
-    @set_avatar.mapping.delete
-    def delete_avatar(self, request):
-        """Сбрасывает аватар пользователя на изображение по умолчанию."""
-        set_default_avatar(request.user, force=True)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """Справочник тегов (только чтение)."""
-    queryset = Tag.objects.all()
+
+    queryset = Tag.objects.all().order_by("id")
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """Справочник ингредиентов; поддерживает фильтр name=istartswith."""
-    queryset = Ingredient.objects.all()
+    """Справочник ингредиентов; фильтр name=istartswith."""
+
+    queryset = Ingredient.objects.all().order_by("id")
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
     filterset_class = IngredientFilter
@@ -183,6 +193,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """CRUD по рецептам и связанные действия."""
+
     queryset = (
         Recipe.objects.all()
         .select_related("author")
@@ -200,7 +211,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_permissions(self):
-        if self.action in {"list", "retrieve"}:
+        if self.action in {"list", "retrieve", "get_link"}:
             return [AllowAny()]
         return super().get_permissions()
 
@@ -213,7 +224,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk=None):
         """Возвращает короткую ссылку на рецепт (абсолютный URL)."""
         recipe = self.get_object()
-        if not recipe.short_link:
+        if not getattr(recipe, "short_link", None):
             recipe.save(update_fields=["short_link"])
         short_path = reverse(
             "recipes:short-link",
@@ -240,7 +251,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = RecipeShortSerializer(
-            recipe, context={"request": request}
+            recipe,
+            context={"request": request},
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -277,7 +289,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = RecipeShortSerializer(
-            recipe, context={"request": request}
+            recipe,
+            context={"request": request},
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -302,7 +315,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        """Формирует и отдаёт .txt со сводным списком ингредиентов."""
+        """Отдаёт .txt со сводным списком ингредиентов."""
         renderer = ShoppingListRenderer(request.user)
         content = renderer.render()
         if not content:
@@ -314,7 +327,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content,
             content_type="text/plain; charset=utf-8",
         )
-        response["Content-Disposition"] = (
-            f'attachment; filename="{SHOPPING_LIST_FILENAME}"'
-        )
+        response[
+            "Content-Disposition"
+        ] = f'attachment; filename="{SHOPPING_LIST_FILENAME}"'
         return response
