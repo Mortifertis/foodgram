@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from djoser.serializers import \
-    UserCreateSerializer as DjoserUserCreateSerializer
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from PIL import Image, UnidentifiedImageError
@@ -38,8 +36,13 @@ class UserSerializer(DjoserUserSerializer):
         return False
 
 
-class UserCreateSerializer(DjoserUserCreateSerializer):
-    class Meta(DjoserUserCreateSerializer.Meta):
+class UserCreateSerializer(serializers.ModelSerializer):
+    """
+    Создание пользователя без проверки "сложности" пароля.
+    """
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
         model = User
         fields = (
             "id",
@@ -50,7 +53,23 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
             "password",
         )
         read_only_fields = ("id",)
-        extra_kwargs = {"password": {"write_only": True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def to_representation(self, instance):
+        data = {
+            "id": instance.id,
+            "username": instance.username,
+            "first_name": instance.first_name,
+            "last_name": instance.last_name,
+            "email": instance.email,
+        }
+        return data
 
 
 class TagSerializer(serializers.ModelSerializer):
