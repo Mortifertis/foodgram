@@ -3,7 +3,6 @@ import django.contrib.auth.models
 import django.contrib.auth.validators
 import django.db.models.deletion
 import django.utils.timezone
-import users.models
 from django.conf import settings
 from django.db import migrations, models
 
@@ -94,7 +93,7 @@ class Migration(migrations.Migration):
                 'ordering': ['id'],
             },
             managers=[
-                ('objects', users.models.UserManager()),
+                ('objects', django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.CreateModel(
