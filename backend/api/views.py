@@ -172,13 +172,21 @@ class CustomUserViewSet(DjoserUserViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    """Справочник тегов (только чтение)."""
-
+class TagViewSet(viewsets.GenericViewSet):
     queryset = Tag.objects.all().order_by("id")
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
