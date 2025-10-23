@@ -3,6 +3,7 @@ from __future__ import annotations
 import django_filters as filters
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
+
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart
 
 User = get_user_model()
