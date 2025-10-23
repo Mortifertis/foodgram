@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from django.db.models import Prefetch
+from django.db.models import Exists, OuterRef, Prefetch
 from django.http import HttpResponse
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -13,7 +13,8 @@ from rest_framework.response import Response
 from users.models import Subscription
 from users.services import delete_avatar_file, set_default_avatar
 
-from .filters import IngredientFilter, RecipeFilter
+from .filters import IngredientFilter
+from .pagination import LimitPageNumberPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeReadSerializer, RecipeShortSerializer,
@@ -208,7 +209,59 @@ class RecipeViewSet(viewsets.ModelViewSet):
         .prefetch_related("tags", "recipe_ingredients__ingredient")
     )
     permission_classes = (IsAuthorOrReadOnly,)
-    filterset_class = RecipeFilter
+    pagination_class = LimitPageNumberPagination
+
+    def get_queryset(self):
+        queryset = (
+            Recipe.objects.select_related("author")
+            .prefetch_related("tags", "recipe_ingredients__ingredient")
+            .order_by("-pub_date", "-id")
+        )
+        request = getattr(self, "request", None)
+        if request is None:
+            return queryset
+
+        params = request.query_params
+        author = params.get("author")
+        if author:
+            try:
+                queryset = queryset.filter(author_id=int(author))
+            except (TypeError, ValueError):
+                return queryset.none()
+
+        tag_slugs = [slug for slug in params.getlist("tags") if slug]
+        if tag_slugs:
+            queryset = queryset.filter(tags__slug__in=tag_slugs).distinct()
+
+        user = request.user
+        fav_param = params.get("is_favorited")
+        cart_param = params.get("is_in_shopping_cart")
+
+        if fav_param in {"0", "1"}:
+            if not user.is_authenticated:
+                if fav_param == "1":
+                    queryset = queryset.none()
+            else:
+                fav_exists = Favorite.objects.filter(
+                    user=user,
+                    recipe=OuterRef("pk"),
+                )
+                queryset = queryset.annotate(_fav=Exists(fav_exists))
+                queryset = queryset.filter(_fav=(fav_param == "1"))
+
+        if cart_param in {"0", "1"}:
+            if not user.is_authenticated:
+                if cart_param == "1":
+                    queryset = queryset.none()
+            else:
+                cart_exists = ShoppingCart.objects.filter(
+                    user=user,
+                    recipe=OuterRef("pk"),
+                )
+                queryset = queryset.annotate(_cart=Exists(cart_exists))
+                queryset = queryset.filter(_cart=(cart_param == "1"))
+
+        return queryset.distinct()
 
     def get_serializer_class(self):
         if self.action in {"list", "retrieve"}:
