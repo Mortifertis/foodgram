@@ -7,13 +7,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'insecure-secret-key')
 DEBUG = os.getenv('DEBUG', 'False').lower() in {'true', '1', 'yes'}
 
-_allowed_hosts = [
-    h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',')
-    if h.strip()
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('ALLOWED_HOSTS', '*').split(',')
+    if host.strip()
 ]
-ALLOWED_HOSTS: list[str] = _allowed_hosts or ['*']
-
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -87,7 +85,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
-ASGI_APPLICATION = 'foodgram_backend.asgi.application'
 
 DEFAULT_DB_CONFIG = {
     'ENGINE': 'django.db.backends.postgresql',
@@ -126,7 +123,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'core.authentication.SafeTokenAuthentication',
+        'api.authentication.SafeTokenAuthentication',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -172,10 +169,3 @@ SIMPLE_JWT = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'root': {'handlers': ['console'], 'level': 'ERROR'},
-}

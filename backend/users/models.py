@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import (EmailValidator, MaxLengthValidator,
                                     RegexValidator)
@@ -7,8 +5,10 @@ from django.db import models
 
 username_validator = RegexValidator(
     regex=r'^[\w.@+-]+\Z',
-    message='Введите корректное имя пользователя. Допустимы только буквы, '
-            'цифры и знаки @/./+/-/_.',
+    message=(
+        'Введите корректное имя пользователя. Допустимы только буквы, '
+        'цифры и знаки @/./+/-/_.'
+    ),
 )
 
 MAX_LEN_UNAME = 150
@@ -20,8 +20,8 @@ class User(AbstractUser):
     """
     Кастомный пользователь:
     - email обязателен и уникален (логинимся по email),
-    - avatar — опциональный ImageField, не обязателен для create,
-    - никаких лишних обязательных полей, чтобы POST /api/users/ не падал 400.
+    - avatar — опциональный ImageField,
+    - без лишних обязательных полей.
     """
     username = models.CharField(
         'username',
@@ -61,7 +61,6 @@ class User(AbstractUser):
 
 class Subscription(models.Model):
     """Подписка пользователя на автора рецептов."""
-
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

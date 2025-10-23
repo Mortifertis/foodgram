@@ -24,7 +24,10 @@ class Ingredient(models.Model):
     """Ингредиент с указанием единицы измерения."""
 
     name = models.CharField('Название', max_length=200)
-    measurement_unit = models.CharField('Единица измерения', max_length=200)
+    measurement_unit = models.CharField(
+        'Единица измерения',
+        max_length=200,
+    )
 
     class Meta:
         ordering = ['name']
@@ -106,7 +109,7 @@ class Recipe(models.Model):
         super().save(*args, **kwargs)
 
     def _generate_short_link(self, length: int = 6) -> str:
-        """Генерирует уникальный идентификатор короткой ссылки для рецепта."""
+        """Генерирует короткий идентификатор для рецепта."""
         allowed_chars = (
             'abcdefghijklmnopqrstuvwxyz'
             'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
