@@ -200,6 +200,42 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             "cooking_time",
         )
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self.instance is not None:
+            initial_data = getattr(self, 'initial_data', {})
+            missing = {}
+            for field_name in ('ingredients', 'tags'):
+                if field_name not in initial_data:
+                    field = self.fields[field_name]
+                    missing[field_name] = [
+                        field.error_messages.get('required', 'Обязательное поле.')
+                    ]
+            if missing:
+                raise serializers.ValidationError(missing)
+        return attrs
+
+    def validate_image(self, value):
+        if not value:
+            raise serializers.ValidationError('Изображение не может быть пустым')
+        try:
+            value.seek(0)
+            with Image.open(value) as image:
+                image_format = (image.format or '').upper()
+        except (UnidentifiedImageError, OSError):
+            raise serializers.ValidationError('Не удалось прочитать изображение') from None
+        finally:
+            try:
+                value.seek(0)
+            except Exception:
+                pass
+
+        if image_format not in {'JPEG', 'JPG', 'PNG'}:
+            raise serializers.ValidationError(
+                'Допустимы только изображения формата JPG или PNG'
+            )
+        return value
+
     def validate_ingredients(self, ingredients):
         if not ingredients:
             raise serializers.ValidationError(
@@ -300,12 +336,15 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return True
 
     def get_recipes(self, obj):
-        request = self.context.get('request')
-        recipes_limit = (
-            request.query_params.get('recipes_limit') if request else None
-        )
-        recipes_qs = obj.author.recipes.order_by("-pub_date")
-        if recipes_limit is not None and str(recipes_limit).isdigit():
+        recipes_qs = obj.author.recipes.order_by('-pub_date')
+        recipes_limit = self.context.get('recipes_limit')
+        if recipes_limit is None:
+            request = self.context.get('request')
+            if request is not None:
+                raw_limit = request.query_params.get('recipes_limit')
+                if raw_limit is not None and raw_limit.isdigit():
+                    recipes_limit = int(raw_limit)
+        if recipes_limit is not None:
             recipes_qs = recipes_qs[: int(recipes_limit)]
         serializer = RecipeShortSerializer(
             recipes_qs,

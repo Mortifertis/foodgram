@@ -109,6 +109,24 @@ class CustomUserViewSet(DjoserUserViewSet):
         Список авторов, на которых подписан текущий пользователь.
         Поддерживает ?recipes_limit=.
         """
+        recipes_limit = request.query_params.get('recipes_limit')
+        parsed_limit = None
+        if recipes_limit is not None:
+            error_message = (
+                'Параметр recipes_limit должен быть положительным целым числом'
+            )
+            if not recipes_limit.isdigit():
+                return Response(
+                    {'errors': error_message},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            parsed_limit = int(recipes_limit)
+            if parsed_limit < 1:
+                return Response(
+                    {'errors': error_message},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         queryset = (
             Subscription.objects.filter(user=request.user)
             .select_related("author")
@@ -123,7 +141,10 @@ class CustomUserViewSet(DjoserUserViewSet):
         serializer = SubscriptionSerializer(
             page if page is not None else queryset,
             many=True,
-            context={"request": request},
+            context={
+                'request': request,
+                'recipes_limit': parsed_limit,
+            },
         )
         if page is not None:
             return self.get_paginated_response(serializer.data)
