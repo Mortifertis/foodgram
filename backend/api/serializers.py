@@ -117,11 +117,26 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(read_only=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
         fields = ("id", "name", "image", "cooking_time")
+
+    def get_image(self, obj):
+        image_field = getattr(obj, 'image', None)
+        if not image_field:
+            return None
+
+        try:
+            url = image_field.url
+        except ValueError:
+            return None
+
+        request = self.context.get("request")
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
@@ -261,7 +276,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source="author.username")
     first_name = serializers.ReadOnlyField(source="author.first_name")
     last_name = serializers.ReadOnlyField(source="author.last_name")
-    avatar = serializers.ImageField(source="author.avatar", read_only=True)
+    avatar = serializers.SerializerMethodField()
 
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
@@ -302,6 +317,21 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_recipes_count(self, obj):
         return obj.author.recipes.count()
 
+    def get_avatar(self, obj):
+        avatar_field = getattr(obj.author, 'avatar', None)
+        if not avatar_field:
+            return None
+
+        try:
+            url = avatar_field.url
+        except ValueError:
+            return None
+
+        request = self.context.get('request')
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
 
 class AvatarSerializer(serializers.Serializer):
     avatar = Base64ImageField()
@@ -309,7 +339,7 @@ class AvatarSerializer(serializers.Serializer):
     def validate_avatar(self, value):
         """Проверяет формат и (разумный) размер изображения аватара."""
         max_size = 5 * 1024 * 1024  # 5 MB
-        size = getattr(value, "size", None)
+        size = getattr(value, 'size', None)
         if size is not None and size > max_size:
             raise serializers.ValidationError(
                 "Размер файла не должен превышать 5 МБ"
