@@ -1,0 +1,183 @@
+{
+	"id": "27d62da8-7aea-4105-b202-daeb6c3c2934",
+	"name": "diploma",
+	"timestamp": "2025-10-23T07:51:04.127Z",
+	"collection_id": "48037953-56f3703f-9484-4edb-b56e-1f294814bfc3",
+	"folder_id": "48037953-64e0c97d-bc09-49ee-8664-a164054b3af1",
+	"environment_id": "48037953-8cc7bdda-1929-4340-8e39-4d54210003b1",
+	"totalPass": 2,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2025-10-23T07:51:03.066Z",
+	"totalFail": 4,
+	"results": [
+		{
+			"id": "53acb24b-24d0-49e9-b4db-1a484914e3f7",
+			"name": "add_to_shopping_cart // User",
+			"url": "https://foodgram17.mooo.com/api/recipes/{{firstRecipeId}}/shopping_cart/",
+			"time": 26,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Статус-код ответа должен быть 201": false,
+				"Структура ответа должна соответствовать ожидаемой": false
+			},
+			"testPassFailCounts": {
+				"Статус-код ответа должен быть 201": {
+					"pass": 0,
+					"fail": 1
+				},
+				"Структура ответа должна соответствовать ожидаемой": {
+					"pass": 0,
+					"fail": 1
+				}
+			},
+			"times": [
+				26
+			],
+			"allTests": [
+				{
+					"Статус-код ответа должен быть 201": false,
+					"Структура ответа должна соответствовать ожидаемой": false
+				}
+			]
+		},
+		{
+			"id": "272508fe-f6ee-4bbb-b1ef-bf7afba1a0a4",
+			"name": "download_shopping_cart // User",
+			"url": "https://foodgram17.mooo.com/api/recipes/download_shopping_cart/",
+			"time": 23,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {
+				"Статус-код ответа должен быть 200": false
+			},
+			"testPassFailCounts": {
+				"Статус-код ответа должен быть 200": {
+					"pass": 0,
+					"fail": 1
+				}
+			},
+			"times": [
+				23
+			],
+			"allTests": [
+				{
+					"Статус-код ответа должен быть 200": false
+				}
+			]
+		},
+		{
+			"id": "a30da78a-f734-491c-bf05-c0fb9a573311",
+			"name": "add_to_shopping_cart // No Auth",
+			"url": "https://foodgram17.mooo.com/api/recipes/{{firstRecipeId}}/shopping_cart/",
+			"time": 12,
+			"responseCode": {
+				"code": 401,
+				"name": "Unauthorized"
+			},
+			"tests": {
+				"Статус-код ответа должен быть 401": true
+			},
+			"testPassFailCounts": {
+				"Статус-код ответа должен быть 401": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				12
+			],
+			"allTests": [
+				{
+					"Статус-код ответа должен быть 401": true
+				}
+			]
+		},
+		{
+			"id": "7780bae4-c1cb-4ca8-a7d6-b231df6e5276",
+			"name": "add_again_to_shopping_cart // User",
+			"url": "https://foodgram17.mooo.com/api/recipes/{{firstRecipeId}}/shopping_cart/",
+			"time": 24,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Статус-код ответа должен быть 400": false
+			},
+			"testPassFailCounts": {
+				"Статус-код ответа должен быть 400": {
+					"pass": 0,
+					"fail": 1
+				}
+			},
+			"times": [
+				24
+			],
+			"allTests": [
+				{
+					"Статус-код ответа должен быть 400": false
+				}
+			]
+		},
+		{
+			"id": "293095e2-196d-49d1-8834-0a5874c22a46",
+			"name": "add_non_existing_recipe_to_shopping_cart // User",
+			"url": "https://foodgram17.mooo.com/api/recipes/9876/shopping_cart/",
+			"time": 25,
+			"responseCode": {
+				"code": 404,
+				"name": "Not Found"
+			},
+			"tests": {
+				"Статус-код ответа должен быть 404": true
+			},
+			"testPassFailCounts": {
+				"Статус-код ответа должен быть 404": {
+					"pass": 1,
+					"fail": 0
+				}
+			},
+			"times": [
+				25
+			],
+			"allTests": [
+				{
+					"Статус-код ответа должен быть 404": true
+				}
+			]
+		}
+	],
+	"count": 1,
+	"totalTime": 110,
+	"collection": {
+		"requests": [
+			{
+				"id": "53acb24b-24d0-49e9-b4db-1a484914e3f7",
+				"method": "POST"
+			},
+			{
+				"id": "272508fe-f6ee-4bbb-b1ef-bf7afba1a0a4",
+				"method": "GET"
+			},
+			{
+				"id": "a30da78a-f734-491c-bf05-c0fb9a573311",
+				"method": "POST"
+			},
+			{
+				"id": "7780bae4-c1cb-4ca8-a7d6-b231df6e5276",
+				"method": "POST"
+			},
+			{
+				"id": "293095e2-196d-49d1-8834-0a5874c22a46",
+				"method": "POST"
+			}
+		]
+	}
+}
