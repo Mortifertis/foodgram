@@ -209,7 +209,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 if field_name not in initial_data:
                     field = self.fields[field_name]
                     missing[field_name] = [
-                        field.error_messages.get('required', 'Обязательное поле.')
+                        field.error_messages.get(
+                            "required",
+                            "Обязательное поле.",
+                        )
                     ]
             if missing:
                 raise serializers.ValidationError(missing)
@@ -217,13 +220,17 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def validate_image(self, value):
         if not value:
-            raise serializers.ValidationError('Изображение не может быть пустым')
+            raise serializers.ValidationError(
+                'Изображение не может быть пустым'
+            )
         try:
             value.seek(0)
             with Image.open(value) as image:
                 image_format = (image.format or '').upper()
         except (UnidentifiedImageError, OSError):
-            raise serializers.ValidationError('Не удалось прочитать изображение') from None
+            raise serializers.ValidationError(
+                'Не удалось прочитать изображение'
+            ) from None
         finally:
             try:
                 value.seek(0)
