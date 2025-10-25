@@ -2,11 +2,9 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import EmailValidator, MaxLengthValidator
 from django.db import models
 
+from .constants import (AVATAR_UPLOAD_TO, MAX_LEN_EMAIL, MAX_LEN_NAME,
+                        MAX_LEN_UNAME)
 from .validators import USERNAME_VALIDATOR
-
-MAX_LEN_UNAME = 150
-MAX_LEN_NAME = 150
-MAX_LEN_EMAIL = 254
 
 
 class User(AbstractUser):
@@ -36,7 +34,7 @@ class User(AbstractUser):
     )
     avatar = models.ImageField(
         'Аватар',
-        upload_to='avatars/',
+        upload_to=AVATAR_UPLOAD_TO,
         blank=True,
         null=True,
     )

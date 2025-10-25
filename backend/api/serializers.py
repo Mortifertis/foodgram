@@ -12,7 +12,7 @@ from users.validators import USERNAME_VALIDATOR
 
 from .constants import (AVATAR_ALLOWED_FORMATS, AVATAR_INVALID_FORMAT_MESSAGE,
                         AVATAR_INVALID_IMAGE_MESSAGE, AVATAR_MAX_SIZE_BYTES,
-                        AVATAR_TOO_LARGE_MESSAGE)
+                        AVATAR_TOO_LARGE_MESSAGE, PARAM_RECIPES_LIMIT)
 
 User = get_user_model()
 
@@ -354,11 +354,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         recipes_qs = obj.author.recipes.order_by('-pub_date')
-        recipes_limit = self.context.get('recipes_limit')
+        recipes_limit = self.context.get(PARAM_RECIPES_LIMIT)
         if recipes_limit is None:
             request = self.context.get('request')
             if request is not None:
-                raw = request.query_params.get('recipes_limit')
+                raw = request.query_params.get(PARAM_RECIPES_LIMIT)
                 if raw is not None and raw.isdigit():
                     recipes_limit = int(raw)
         if recipes_limit is not None:

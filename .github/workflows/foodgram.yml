@@ -104,14 +104,14 @@ jobs:
             # подтянуть свежие образы
             docker compose -f docker-compose.production.yml pull
 
-            # поднять db + backend (ждём здоровье db)
+            # поднять db + backend (ожидаем db)
             docker compose -f docker-compose.production.yml up -d db backend
 
             # миграции и статика
             docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
             docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --noinput
 
-            # собрать фронт (одноразово)
+            # собрать фронт
             docker compose -f docker-compose.production.yml run --rm frontend
 
             # поднять gateway на 10000
