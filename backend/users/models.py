@@ -1,15 +1,8 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import (EmailValidator, MaxLengthValidator,
-                                    RegexValidator)
+from django.core.validators import EmailValidator, MaxLengthValidator
 from django.db import models
 
-username_validator = RegexValidator(
-    regex=r'^[\w.@+-]+\Z',
-    message=(
-        'Введите корректное имя пользователя. Допустимы только буквы, '
-        'цифры и знаки @/./+/-/_.'
-    ),
-)
+from .validators import USERNAME_VALIDATOR
 
 MAX_LEN_UNAME = 150
 MAX_LEN_NAME = 150
@@ -27,7 +20,7 @@ class User(AbstractUser):
         'username',
         max_length=MAX_LEN_UNAME,
         unique=True,
-        validators=[username_validator, MaxLengthValidator(MAX_LEN_UNAME)],
+        validators=[USERNAME_VALIDATOR, MaxLengthValidator(MAX_LEN_UNAME)],
         help_text=(
             'Обязательное поле. Не более 150 символов. '
             'Только буквы, цифры и @/./+/-/_'

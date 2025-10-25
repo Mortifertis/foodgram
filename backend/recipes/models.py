@@ -1,15 +1,30 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.utils.crypto import get_random_string
+
+from .constants import (INGREDIENT_MEASUREMENT_MAX_LENGTH,
+                        INGREDIENT_NAME_MAX_LENGTH, RECIPE_COOKING_TIME_MIN,
+                        RECIPE_COOKING_TIME_MIN_MESSAGE,
+                        RECIPE_IMAGE_UPLOAD_DIR,
+                        RECIPE_INGREDIENT_AMOUNT_MESSAGE,
+                        RECIPE_INGREDIENT_AMOUNT_MIN, RECIPE_NAME_MAX_LENGTH,
+                        RECIPE_SHORT_LINK_MAX_LENGTH, TAG_COLOR_MAX_LENGTH,
+                        TAG_NAME_MAX_LENGTH, TAG_SLUG_MAX_LENGTH)
+from .utils import generate_unique_short_link
 
 
 class Tag(models.Model):
     """Тег для группировки рецептов."""
 
-    name = models.CharField('Название', max_length=200, unique=True)
-    color = models.CharField('Цветовой HEX-код', max_length=7, unique=True)
-    slug = models.SlugField('Слаг', max_length=200, unique=True)
+    name = models.CharField(
+        'Название', max_length=TAG_NAME_MAX_LENGTH, unique=True
+    )
+    color = models.CharField(
+        'Цветовой HEX-код', max_length=TAG_COLOR_MAX_LENGTH, unique=True
+    )
+    slug = models.SlugField(
+        'Слаг', max_length=TAG_SLUG_MAX_LENGTH, unique=True
+    )
 
     class Meta:
         ordering = ['id']
@@ -23,10 +38,10 @@ class Tag(models.Model):
 class Ingredient(models.Model):
     """Ингредиент с указанием единицы измерения."""
 
-    name = models.CharField('Название', max_length=200)
+    name = models.CharField('Название', max_length=INGREDIENT_NAME_MAX_LENGTH)
     measurement_unit = models.CharField(
         'Единица измерения',
-        max_length=200,
+        max_length=INGREDIENT_MEASUREMENT_MAX_LENGTH,
     )
 
     class Meta:
@@ -53,15 +68,15 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Автор',
     )
-    name = models.CharField('Название', max_length=200)
-    image = models.ImageField('Изображение', upload_to='recipes/')
+    name = models.CharField('Название', max_length=RECIPE_NAME_MAX_LENGTH)
+    image = models.ImageField('Изображение', upload_to=RECIPE_IMAGE_UPLOAD_DIR)
     text = models.TextField('Описание')
     cooking_time = models.PositiveIntegerField(
         'Время приготовления (мин)',
         validators=[
             MinValueValidator(
-                1,
-                message='Минимальное время приготовления — 1 минута',
+                RECIPE_COOKING_TIME_MIN,
+                message=RECIPE_COOKING_TIME_MIN_MESSAGE,
             )
         ],
     )
@@ -79,7 +94,7 @@ class Recipe(models.Model):
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     short_link = models.SlugField(
         'Короткая ссылка',
-        max_length=32,
+        max_length=RECIPE_SHORT_LINK_MAX_LENGTH,
         unique=True,
         blank=True,
     )
@@ -101,27 +116,14 @@ class Recipe(models.Model):
     def save(self, *args, **kwargs):
         update_fields = kwargs.get('update_fields')
         if not self.short_link:
-            self.short_link = self._generate_short_link()
+            self.short_link = generate_unique_short_link(
+                self.__class__
+            )
             if update_fields is not None:
                 kwargs['update_fields'] = list(
                     set(update_fields) | {'short_link'}
                 )
         super().save(*args, **kwargs)
-
-    def _generate_short_link(self, length: int = 6) -> str:
-        """Генерирует короткий идентификатор для рецепта."""
-        allowed_chars = (
-            'abcdefghijklmnopqrstuvwxyz'
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-            '0123456789'
-        )
-        while True:
-            candidate = get_random_string(
-                length=length,
-                allowed_chars=allowed_chars,
-            )
-            if not Recipe.objects.filter(short_link=candidate).exists():
-                return candidate
 
 
 class RecipeIngredient(models.Model):
@@ -143,8 +145,8 @@ class RecipeIngredient(models.Model):
         'Количество',
         validators=[
             MinValueValidator(
-                1,
-                message='Количество должно быть не меньше 1',
+                RECIPE_INGREDIENT_AMOUNT_MIN,
+                message=RECIPE_INGREDIENT_AMOUNT_MESSAGE,
             )
         ],
     )

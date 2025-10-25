@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Prefetch
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.views import View
 from djoser.views import UserViewSet as DjoserUserViewSet
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status, viewsets
@@ -11,7 +13,7 @@ from rest_framework.response import Response
 from users.models import Subscription
 from users.services import delete_avatar_file, set_default_avatar
 
-from .filters import IngredientFilter
+from .filters import IngredientFilter, RecipeFilter
 from .pagination import LimitPageNumberPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
@@ -25,8 +27,6 @@ User = get_user_model()
 SHOPPING_LIST_FILENAME = 'shopping-list.txt'
 SHORT_LINK_RESPONSE_KEY = 'short-link'
 PARAM_RECIPES_LIMIT = 'recipes_limit'
-FLAG_TRUE = '1'
-FLAG_FALSE = '0'
 MIME_TEXT = 'text/plain; charset=utf-8'
 HDR_CONTENT_DISPOSITION = 'Content-Disposition'
 
@@ -190,7 +190,7 @@ class CustomUserViewSet(DjoserUserViewSet):
             user=request.user,
             author=author,
         ).delete()
-        if deleted == 0:
+        if not deleted:
             return Response(
                 {'errors': ERR_SUB_NOT_FOUND},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -232,24 +232,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         Recipe.objects.all()
         .select_related('author')
         .prefetch_related('tags', 'recipe_ingredients__ingredient')
+        .order_by('-pub_date', '-id')
+        .distinct()
     )
     permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = LimitPageNumberPagination
-
-    @staticmethod
-    def _apply_flag(queryset, user, param, model, annotate_name):
-        """
-        Фильтрует по булевому флагу '0'/'1'.
-        Для анонима и '1' возвращает пусто; для '0' — весь queryset.
-        """
-        if param not in {FLAG_FALSE, FLAG_TRUE}:
-            return queryset
-        if not user.is_authenticated:
-            return queryset.none() if param == FLAG_TRUE else queryset
-
-        exists_qs = model.objects.filter(user=user, recipe=OuterRef('pk'))
-        qs = queryset.annotate(**{annotate_name: Exists(exists_qs)})
-        return qs.filter(**{annotate_name: (param == FLAG_TRUE)})
+    filterset_class = RecipeFilter
 
     @staticmethod
     def _add_relation(model, user, recipe, error_msg):
@@ -270,46 +258,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def get_queryset(self):
-        queryset = (
-            Recipe.objects.select_related('author')
-            .prefetch_related('tags', 'recipe_ingredients__ingredient')
-            .order_by('-pub_date', '-id')
-        )
-        request = getattr(self, 'request', None)
-        if request is None:
-            return queryset
-
-        params = request.query_params
-        author = params.get('author')
-        if author:
-            try:
-                queryset = queryset.filter(author_id=int(author))
-            except (TypeError, ValueError):
-                return queryset.none()
-
-        tag_slugs = [slug for slug in params.getlist('tags') if slug]
-        if tag_slugs:
-            queryset = queryset.filter(tags__slug__in=tag_slugs).distinct()
-
-        user = request.user
-        queryset = self._apply_flag(
-            queryset,
-            user,
-            params.get('is_favorited'),
-            Favorite,
-            '_fav',
-        )
-        queryset = self._apply_flag(
-            queryset,
-            user,
-            params.get('is_in_shopping_cart'),
-            ShoppingCart,
-            '_cart',
-        )
-
-        return queryset.distinct()
 
     def get_serializer_class(self):
         if self.action in {'list', 'retrieve'}:
@@ -415,3 +363,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             f'attachment; filename="{SHOPPING_LIST_FILENAME}"'
         )
         return response
+
+
+class RecipeShortLinkRedirectView(View):
+    """Перенаправляет на страницу рецепта по короткой ссылке."""
+
+    def get(self, request, short_link):
+        recipe = get_object_or_404(Recipe, short_link=short_link)
+        return redirect(f'/recipes/{recipe.id}/')

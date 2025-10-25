@@ -6,7 +6,13 @@ from PIL import Image, UnidentifiedImageError
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from users.models import Subscription
+from users.validators import USERNAME_VALIDATOR
+
+from .constants import (AVATAR_ALLOWED_FORMATS, AVATAR_INVALID_FORMAT_MESSAGE,
+                        AVATAR_INVALID_IMAGE_MESSAGE, AVATAR_MAX_SIZE_BYTES,
+                        AVATAR_TOO_LARGE_MESSAGE)
 
 User = get_user_model()
 
@@ -46,6 +52,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """
     Создание пользователя без проверки "сложности" пароля.
     """
+    username = serializers.CharField(
+        validators=[
+            USERNAME_VALIDATOR,
+            UniqueValidator(queryset=User.objects.all()),
+        ]
+    )
     password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
@@ -378,19 +390,16 @@ class AvatarSerializer(serializers.Serializer):
 
     def validate_avatar(self, value):
         """Проверяет формат и размер изображения аватара."""
-        max_size = 5 * 1024 * 1024  # 5 MB
         size = getattr(value, 'size', None)
-        if size is not None and size > max_size:
-            raise serializers.ValidationError(
-                'Размер файла не должен превышать 5 МБ'
-            )
+        if size is not None and size > AVATAR_MAX_SIZE_BYTES:
+            raise serializers.ValidationError(AVATAR_TOO_LARGE_MESSAGE)
         try:
             value.seek(0)
             with Image.open(value) as image:
                 image_format = (image.format or '').upper()
         except (UnidentifiedImageError, OSError):
             raise serializers.ValidationError(
-                'Не удалось прочитать изображение'
+                AVATAR_INVALID_IMAGE_MESSAGE
             ) from None
         finally:
             try:
@@ -398,8 +407,6 @@ class AvatarSerializer(serializers.Serializer):
             except Exception:
                 pass
 
-        if image_format not in {'JPEG', 'JPG', 'PNG'}:
-            raise serializers.ValidationError(
-                'Допустимы только изображения формата JPG или PNG'
-            )
+        if image_format not in AVATAR_ALLOWED_FORMATS:
+            raise serializers.ValidationError(AVATAR_INVALID_FORMAT_MESSAGE)
         return value
