@@ -17,7 +17,7 @@ class User(AbstractUser):
     - без лишних обязательных полей.
     """
     username = models.CharField(
-        'username',
+        'Имя пользователя',
         max_length=MAX_LEN_UNAME,
         unique=True,
         validators=[USERNAME_VALIDATOR, MaxLengthValidator(MAX_LEN_UNAME)],
@@ -26,15 +26,16 @@ class User(AbstractUser):
             'Только буквы, цифры и @/./+/-/_'
         ),
     )
-    first_name = models.CharField('first name', max_length=MAX_LEN_NAME)
-    last_name = models.CharField('last name', max_length=MAX_LEN_NAME)
+    first_name = models.CharField('Имя', max_length=MAX_LEN_NAME)
+    last_name = models.CharField('Фамилия', max_length=MAX_LEN_NAME)
     email = models.EmailField(
-        'email address',
+        'Адрес электронной почты',
         max_length=MAX_LEN_EMAIL,
         unique=True,
         validators=[EmailValidator(), MaxLengthValidator(MAX_LEN_EMAIL)],
     )
     avatar = models.ImageField(
+        'Аватар',
         upload_to='avatars/',
         blank=True,
         null=True,
@@ -45,8 +46,8 @@ class User(AbstractUser):
 
     class Meta:
         ordering = ('id',)
-        verbose_name = 'user'
-        verbose_name_plural = 'users'
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
     def __str__(self) -> str:
         return f'{self.username} <{self.email}>'
