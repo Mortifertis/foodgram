@@ -7,5 +7,3 @@ USERNAME_VALIDATOR = RegexValidator(
         'цифры и знаки @/./+/-/_.'
     ),
 )
-
-__all__ = ['USERNAME_VALIDATOR']

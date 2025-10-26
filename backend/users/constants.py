@@ -2,10 +2,3 @@ MAX_LEN_UNAME = 150
 MAX_LEN_NAME = 150
 MAX_LEN_EMAIL = 254
 AVATAR_UPLOAD_TO = 'avatars/'
-
-__all__ = [
-    'MAX_LEN_UNAME',
-    'MAX_LEN_NAME',
-    'MAX_LEN_EMAIL',
-    'AVATAR_UPLOAD_TO',
-]

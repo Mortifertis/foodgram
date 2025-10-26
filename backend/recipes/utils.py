@@ -14,6 +14,3 @@ def generate_unique_short_link(
         )
         if not model.objects.filter(short_link=candidate).exists():
             return candidate
-
-
-__all__ = ['generate_unique_short_link']
