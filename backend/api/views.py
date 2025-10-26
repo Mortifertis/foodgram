@@ -97,7 +97,7 @@ class CustomUserViewSet(DjoserUserViewSet):
     @set_avatar.mapping.delete
     def delete_avatar(self, request):
         """Удаляет аватар."""
-        set_default_avatar(request.user, force=True)
+        set_default_avatar(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(

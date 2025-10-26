@@ -166,27 +166,50 @@ class RecipeIngredient(models.Model):
         return f'{self.ingredient.name} — {self.amount}'
 
 
-class Favorite(models.Model):
-    """Избранный рецепт пользователя."""
+class BaseRecipeRelation(models.Model):
+    user_related_name = None
+    recipe_related_name = None
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='favorites',
         verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
-        Recipe,
+        'Recipe',
         on_delete=models.CASCADE,
-        related_name='favorited_by',
         verbose_name='Рецепт',
     )
     added = models.DateTimeField('Дата добавления', auto_now_add=True)
 
     class Meta:
+        abstract = True
+        ordering = ['-added']
+
+    def __str__(self) -> str:
+        return f'{self.user} -> {self.recipe}'
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if getattr(cls._meta, 'abstract', False):
+            return
+        user_field = cls._meta.get_field('user')
+        recipe_field = cls._meta.get_field('recipe')
+        if cls.user_related_name is not None:
+            user_field.remote_field.related_name = cls.user_related_name
+        if cls.recipe_related_name is not None:
+            recipe_field.remote_field.related_name = cls.recipe_related_name
+
+
+class Favorite(BaseRecipeRelation):
+    """Избранный рецепт пользователя."""
+
+    user_related_name = 'favorites'
+    recipe_related_name = 'favorited_by'
+
+    class Meta:
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
-        ordering = ['-added']
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
@@ -194,37 +217,18 @@ class Favorite(models.Model):
             )
         ]
 
-    def __str__(self) -> str:
-        return f'{self.user} -> {self.recipe}'
 
-
-class ShoppingCart(models.Model):
+class ShoppingCart(BaseRecipeRelation):
     """Позиции списка покупок пользователя."""
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='shopping_cart',
-        verbose_name='Пользователь',
-    )
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        related_name='in_carts',
-        verbose_name='Рецепт',
-    )
-    added = models.DateTimeField('Дата добавления', auto_now_add=True)
+    user_related_name = 'shopping_cart'
+    recipe_related_name = 'in_carts'
 
     class Meta:
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'
-        ordering = ['-added']
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
                 name='unique_cart_recipe',
             )
         ]
-
-    def __str__(self) -> str:
-        return f'{self.user} -> {self.recipe}'

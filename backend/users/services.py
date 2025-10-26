@@ -14,7 +14,7 @@ def delete_avatar_file(user) -> None:
         pass
 
 
-def set_default_avatar(user, force: bool = False) -> None:
+def set_default_avatar(user) -> None:
     """
     Сбрасывает поле avatar к пустому значению.
     """

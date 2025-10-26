@@ -25,6 +25,31 @@ def _abs_url(request, url: str | None) -> str | None:
     return url
 
 
+def _read_image_format(value, error_message):
+    try:
+        value.seek(0)
+        with Image.open(value) as image:
+            image_format = (image.format or '').upper()
+    except (UnidentifiedImageError, OSError):
+        raise serializers.ValidationError(error_message) from None
+    finally:
+        try:
+            value.seek(0)
+        except Exception:
+            pass
+    return image_format
+
+
+def _build_image_url(request, image_field):
+    if not image_field:
+        return None
+    try:
+        url = image_field.url
+    except ValueError:
+        return None
+    return _abs_url(request, url)
+
+
 class UserSerializer(DjoserUserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(read_only=True)
@@ -139,15 +164,8 @@ class RecipeShortSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
     def get_image(self, obj):
-        image_field = getattr(obj, 'image', None)
-        if not image_field:
-            return None
-        try:
-            url = image_field.url
-        except ValueError:
-            return None
         request = self.context.get('request')
-        return _abs_url(request, url)
+        return _build_image_url(request, getattr(obj, 'image', None))
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
@@ -233,19 +251,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Изображение не может быть пустым'
             )
-        try:
-            value.seek(0)
-            with Image.open(value) as image:
-                image_format = (image.format or '').upper()
-        except (UnidentifiedImageError, OSError):
-            raise serializers.ValidationError(
-                'Не удалось прочитать изображение'
-            ) from None
-        finally:
-            try:
-                value.seek(0)
-            except Exception:
-                pass
+        image_format = _read_image_format(
+            value,
+            'Не удалось прочитать изображение',
+        )
 
         if image_format not in {'JPEG', 'JPG', 'PNG'}:
             raise serializers.ValidationError(
@@ -374,15 +383,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return obj.author.recipes.count()
 
     def get_avatar(self, obj):
-        avatar_field = getattr(obj.author, 'avatar', None)
-        if not avatar_field:
-            return None
-        try:
-            url = avatar_field.url
-        except ValueError:
-            return None
         request = self.context.get('request')
-        return _abs_url(request, url)
+        avatar_field = getattr(obj.author, 'avatar', None)
+        return _build_image_url(request, avatar_field)
 
 
 class AvatarSerializer(serializers.Serializer):
@@ -393,19 +396,7 @@ class AvatarSerializer(serializers.Serializer):
         size = getattr(value, 'size', None)
         if size is not None and size > AVATAR_MAX_SIZE_BYTES:
             raise serializers.ValidationError(AVATAR_TOO_LARGE_MESSAGE)
-        try:
-            value.seek(0)
-            with Image.open(value) as image:
-                image_format = (image.format or '').upper()
-        except (UnidentifiedImageError, OSError):
-            raise serializers.ValidationError(
-                AVATAR_INVALID_IMAGE_MESSAGE
-            ) from None
-        finally:
-            try:
-                value.seek(0)
-            except Exception:
-                pass
+        image_format = _read_image_format(value, AVATAR_INVALID_IMAGE_MESSAGE)
 
         if image_format not in AVATAR_ALLOWED_FORMATS:
             raise serializers.ValidationError(AVATAR_INVALID_FORMAT_MESSAGE)
