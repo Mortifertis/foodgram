@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.base import ModelBase
 
 from .constants import (INGREDIENT_MEASUREMENT_MAX_LENGTH,
                         INGREDIENT_NAME_MAX_LENGTH, RECIPE_COOKING_TIME_MIN,
@@ -166,7 +167,31 @@ class RecipeIngredient(models.Model):
         return f'{self.ingredient.name} — {self.amount}'
 
 
-class BaseRecipeRelation(models.Model):
+class BaseRecipeRelationMeta(ModelBase):
+    """Метакласс для установки связанных имён в моделях отношений."""
+
+    def __new__(mcls, name, bases, attrs, **kwargs):
+        cls = super().__new__(mcls, name, bases, attrs, **kwargs)
+        if getattr(cls._meta, 'abstract', False):
+            return cls
+
+        user_related_name = getattr(cls, 'user_related_name', None)
+        recipe_related_name = getattr(cls, 'recipe_related_name', None)
+
+        if user_related_name is not None:
+            user_field = cls._meta.get_field('user')
+            user_field.remote_field.related_name = user_related_name
+            user_field.remote_field.related_query_name = user_related_name
+
+        if recipe_related_name is not None:
+            recipe_field = cls._meta.get_field('recipe')
+            recipe_field.remote_field.related_name = recipe_related_name
+            recipe_field.remote_field.related_query_name = recipe_related_name
+
+        return cls
+
+
+class BaseRecipeRelation(models.Model, metaclass=BaseRecipeRelationMeta):
     user_related_name = None
     recipe_related_name = None
 
@@ -188,17 +213,6 @@ class BaseRecipeRelation(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user} -> {self.recipe}'
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if getattr(cls._meta, 'abstract', False):
-            return
-        user_field = cls._meta.get_field('user')
-        recipe_field = cls._meta.get_field('recipe')
-        if cls.user_related_name is not None:
-            user_field.remote_field.related_name = cls.user_related_name
-        if cls.recipe_related_name is not None:
-            recipe_field.remote_field.related_name = cls.recipe_related_name
 
 
 class Favorite(BaseRecipeRelation):
