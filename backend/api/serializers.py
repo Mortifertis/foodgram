@@ -16,6 +16,8 @@ from .constants import (AVATAR_ALLOWED_FORMATS, AVATAR_INVALID_FORMAT_MESSAGE,
 
 User = get_user_model()
 
+USERNAME_MAX_LENGTH = User._meta.get_field('username').max_length
+
 
 def _abs_url(request, url: str | None) -> str | None:
     if not url:
@@ -78,6 +80,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     Создание пользователя без проверки "сложности" пароля.
     """
     username = serializers.CharField(
+        max_length=USERNAME_MAX_LENGTH,
         validators=[
             USERNAME_VALIDATOR,
             UniqueValidator(queryset=User.objects.all()),
