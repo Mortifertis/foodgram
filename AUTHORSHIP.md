@@ -1,7 +1,7 @@
-# Authorship notice
+# Уведомление об авторстве
 
-This repository contains an educational graduation project completed as part of a Python developer course.
+Этот репозиторий содержит учебный выпускной проект, выполненный в рамках курса Python-разработчика.
 
-Backend implementation, API logic, database models, Docker configuration and CI/CD setup were implemented by the repository owner.
+Backend-часть проекта, API-логика, модели данных, Docker-конфигурация и CI/CD были реализованы владельцем репозитория.
 
-The frontend code was provided as part of the course project template and is included here only to demonstrate integration with the backend API.
+Frontend-код был предоставлен как часть учебного шаблона и включен в репозиторий только для демонстрации интеграции с backend API.
